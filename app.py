@@ -8,7 +8,6 @@ import os
 import datetime
 import imageio
 from numpy import uint8
-import matplotlib.pyplot as plt
 
 camaras = {
     'cam1': {'url': ('192.168.1.102', 5000),
