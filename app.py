@@ -8,24 +8,13 @@ import os
 import datetime
 import imageio
 from numpy import uint8
+import ast
 
-camaras = {
-#    'cam1': {'url': ('192.168.1.102', 5000),
-#            'conn': '',
-#            'cam': '',
-#            'crop': (900, 1500, 400, 3000)
-#            },
-    'cam2': {'url': ('127.0.0.1', 5000),
-             'conn': '',
-             'cam': '',
-             'crop': (400, 3000, 800, 1400)
-             },
-    'cam3': {'url': ('127.0.0.1', 5001),
-             'conn': '',
-             'cam': '',
-             'crop': (400, 3000, 700, 1300)
-             }
-}
+# Cargo configuracion de las camaras desde el archivo
+# config_camaras.conf
+
+with open('config_camaras.conf', 'r') as file:
+    camaras = ast.literal_eval(file.read())
 
 q = Queue(6)
 
@@ -131,8 +120,7 @@ def initCameras(camaras):
         camaras[cam]['cam'] = RPCProxy(camaras[cam]['conn'])
         camaras[cam]['cam'].set_crop(camaras[cam]['crop'])
         camaras[cam]['cam'].set_date(str(datetime.datetime.today()))
-    for cam in camaras:
-        camaras[cam]['cam'].inicializar()
+        camaras[cam]['cam'].inicializar(camaras[cam]['iso'], camaras[cam]['shutter_speed'])
     return camaras
 
 

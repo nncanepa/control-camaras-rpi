@@ -52,7 +52,7 @@ class RPCHandler:
         try:
             while True:
                 func_name, args, kwargs = connection.recv()
-                print(func_name)
+                print(func_name, args, kwargs)
                 try:
                     r = self._functions[func_name](*args, **kwargs)
                     connection.send(r)
