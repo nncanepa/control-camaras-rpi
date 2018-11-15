@@ -95,8 +95,8 @@ def capturarImagenes(q):
                         img.imagen.astype(uint8),
                         quality=90)
         dx, dy =36, 36
-        #grid_color = [255, 255, 255]
-        grid_color = [0, 0, 0]
+        grid_color = [255, 255, 255]
+        #grid_color = [0, 0, 0]
         img_enh = img.imagen.copy()
         img_enh[::dx,:,:] = grid_color
         img_enh[:,::dy,:] = grid_color
@@ -110,7 +110,6 @@ def capturarImagenes(q):
                                                     img.framerate,
                                                     img.timestamp,
                                                     img.crop))
-
     return imgs
 
 
