@@ -13,7 +13,7 @@ import ast
 # Cargo configuracion de las camaras desde el archivo
 # config_camaras.conf
 
-with open('config_camaras.conf', 'r') as file:
+with open('config_camaras_dev.conf', 'r') as file:
     camaras = ast.literal_eval(file.read())
 
 q = Queue(6)
