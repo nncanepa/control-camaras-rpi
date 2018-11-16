@@ -13,9 +13,6 @@ import ast
 # Cargo configuracion de las camaras desde el archivo
 # config_camaras.conf
 
-#Variable boba
-A=156
-
 with open('config_camaras_dev.conf', 'r') as file:
     camaras = ast.literal_eval(file.read())
 
