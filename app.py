@@ -18,7 +18,6 @@ with open('config_camaras_dev.conf', 'r') as file:
 
 q = Queue(6)
 
-
 class capturaRpi:
     def __init__(self, img, iso, sp, framerate, camName, crop, timestamp=None):
         self.imagen = img
