@@ -16,6 +16,7 @@ import ast
 with open('config_camaras_dev.conf', 'r') as file:
     camaras = ast.literal_eval(file.read())
 
+# Cola para guardado de imagenes
 q = Queue(6)
 
 class capturaRpi:
