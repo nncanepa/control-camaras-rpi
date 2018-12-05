@@ -9,6 +9,7 @@ import datetime
 import imageio
 from numpy import uint8
 import ast
+from concurrent import futures
 
 # Cargo configuracion de las camaras desde el archivo
 # config_camaras.conf
@@ -64,8 +65,8 @@ def timeit(f):
 
 
 @timeit
-def capturarThread(q, cam):
-    q.put_nowait(cam.capturar())
+def capturarThread(cam):
+    return cam.capturar()
 
 
 def capturarImagenes(q):
@@ -73,15 +74,20 @@ def capturarImagenes(q):
     mainDir = 'capturas_{}'.format(fecha)
     if not os.path.exists(mainDir):
         os.makedirs(mainDir)
-    hilos = []
-    for cam in camaras:
-        hilos.append(Thread(target=capturarThread,
-                            args=(q, camaras[cam]['cam'])))
-    for hilo in hilos:
-        hilo.start()
-    for hilo in hilos:
-        hilo.join()
-    imgs = []
+    executor = futures.ThreadPoolExecutor(max_workers=2)
+    wait_for =[executor.submit(camaras[cam]['cam'].capturar, ) for cam in camaras]
+    for f in wait_for:
+        print(type(f.result().imagen))
+#        q.put_nowait(f.result())
+#    hilos = []
+#    for cam in camaras:
+#        hilos.append(Thread(target=capturarThread,
+#                            args=(q, camaras[cam]['cam'])))
+#    for hilo in hilos:
+#        hilo.start()
+#    for hilo in hilos:
+#        hilo.join()
+#    imgs = []
     while not q.qsize() == 0:
         img = q.get()
         imgs.append(img)
