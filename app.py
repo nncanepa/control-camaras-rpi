@@ -3,12 +3,12 @@ from PIL import Image
 from multiprocessing.connection import Client
 from threading import Thread
 import time
-from queue import Queue
 import os
 import datetime
 import imageio
 from numpy import uint8
 import ast
+from concurrent import futures
 
 # Cargo configuracion de las camaras desde el archivo
 # config_camaras.conf
@@ -16,10 +16,13 @@ import ast
 with open('config_camaras_dev.conf', 'r') as file:
     camaras = ast.literal_eval(file.read())
 
-# Cola para guardado de imagenes
-q = Queue(6)
 
 class capturaRpi:
+    '''
+    Clase para las capturas de imagenes del acelerador.
+    Guarda el array en si, mas los parametros de captura y
+    nombre de camara.
+    '''
     def __init__(self, img, iso, sp, framerate, camName, crop, timestamp=None):
         self.imagen = img
         self.iso = iso
@@ -31,17 +34,20 @@ class capturaRpi:
 
 
 class RPCProxy:
+    '''
+    Clase para ejecutar de manera remota comandos en las
+    Raspberry Pi como si las tuvieramos localmente conectadas.
+    Se inicializa con la conexion a cada camara. Luego recibe
+    las funciones que se quieren ejecutar junto con sus parametros
+    y los envia a las Raspberry Pi.
+    En caso de una Exception en la RPi, nos la devuelve como tal y hace
+    un raise de la excepcion.
+    Para ver la contraparte de esta funcion referirse a cameraServer.py
+    que es el script que se corre en las placas.
+
+    '''
     def __init__(self, connection):
         self._connection = connection
-
-    def timeit(f):
-        def timed(*a, **kw):
-            ti = time.time()
-            result = f(*a, **kw)
-            tf = time.time()
-            print('Tiempo: {}'.format(tf-ti))
-            return result
-        return timed
 
     def __getattr__(self, name):
         def do_rpc(*args, **kwargs):
@@ -53,38 +59,28 @@ class RPCProxy:
         return do_rpc
 
 
-def timeit(f):
-    def timed(*a, **kw):
-        ti = time.time()
-        result = f(*a, **kw)
-        tf = time.time()
-        print('Tiempo: {}'.format(tf-ti))
-        return result
-    return timed
-
-
-@timeit
-def capturarThread(q, cam):
-    q.put_nowait(cam.capturar())
-
-
-def capturarImagenes(q):
+def capturarImagenes():
+    '''
+    Funcion que incia captura en hilos separados de todas las camaras
+    listadas en la configuracion (ver config_camaras.conf).
+    Genera un pool de hilos disponibles y espera que todas devuelvan la
+    imagen a medida que van terminando la captura.
+    Cuando terminan de capturar se guardan las imagenes en una carpeta para
+    cada camara, junto con una imagen "mejorada" para la visualizacion en
+    la carpeta base.
+    '''
+    imgs=[]
     fecha = datetime.datetime.today().strftime('%Y_%m_%d_%H')
     mainDir = 'capturas_{}'.format(fecha)
     if not os.path.exists(mainDir):
         os.makedirs(mainDir)
-    hilos = []
-    for cam in camaras:
-        hilos.append(Thread(target=capturarThread,
-                            args=(q, camaras[cam]['cam'])))
-    for hilo in hilos:
-        hilo.start()
-    for hilo in hilos:
-        hilo.join()
-    imgs = []
-    while not q.qsize() == 0:
-        img = q.get()
-        imgs.append(img)
+    executor = futures.ThreadPoolExecutor(max_workers=2)
+    wait_for =[executor.submit(camaras[cam]['cam'].capturar, ) for cam in camaras]
+    for f in futures.as_completed(wait_for):
+        imgs.append(f.result())
+    executor.shutdown()
+    while imgs:
+        img = imgs.pop()
         if not os.path.exists('{}/{}'.format(mainDir, img.camName)):
             os.makedirs('{}/{}'.format(mainDir, img.camName))
         imageio.imwrite('{}/{}/{}__{}_{}.jpg'.format(mainDir,
@@ -110,10 +106,15 @@ def capturarImagenes(q):
                                                     img.framerate,
                                                     img.timestamp,
                                                     img.crop))
-    return imgs
+    return 0
 
 
 def initCameras(camaras):
+    '''
+    Funcion que inicializa la conexion con todas las camaras listadas
+    en config_camaras.conf, y luego setea los parametros de captura
+    junto con la fecha actual de la maquina de control.
+    '''
     for cam in camaras:
         camaras[cam]['conn'] = Client(camaras[cam]['url'], authkey=b'peekaboo')
         camaras[cam]['cam'] = RPCProxy(camaras[cam]['conn'])
@@ -127,6 +128,6 @@ initCameras(camaras)
 
 while True:
     try:
-        capturarImagenes(q)
+        capturarImagenes()
     except KeyboardInterrupt:
         break
