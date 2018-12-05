@@ -10,6 +10,11 @@ import platform
 from subprocess import call
 
 class capturaRpi:
+    '''
+    Clase para las capturas de imagenes del acelerador.
+    Guarda el array en si, mas los parametros de captura y
+    nombre de camara.
+    '''
     def __init__(self, img, iso, sp, framerate, camName, crop=None, timestamp=None):
         self.imagen = img
         self.iso = iso
@@ -20,6 +25,11 @@ class capturaRpi:
         self.timestamp = timestamp
 
 class RPCHandler:
+    '''
+    Clase que maneja la conexion de control remota.
+    Recibe las funciones a ejecutar (que tienen que estar en
+    self._functions) juntos con los parametros.
+    '''
     def __init__(self):
         self._functions = {'inicializar': self.inicializar,
                            'capturar': self.capturar,

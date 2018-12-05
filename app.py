@@ -23,12 +23,12 @@ class capturaRpi:
     Guarda el array en si, mas los parametros de captura y
     nombre de camara.
     '''
-    def __init__(self, img, iso, sp, framerate, camName, crop, timestamp=None):
+    def __init__(self, img, iso, sp, framerate, camName, crop=None, timestamp=None):
         self.imagen = img
         self.iso = iso
         self.shutter_speed = sp
         self.framerate = float(framerate)
-        self.camName = platform.node()
+        self.camName = camName 
         self.crop = crop
         self.timestamp = timestamp
 
@@ -44,7 +44,6 @@ class RPCProxy:
     un raise de la excepcion.
     Para ver la contraparte de esta funcion referirse a cameraServer.py
     que es el script que se corre en las placas.
-
     '''
     def __init__(self, connection):
         self._connection = connection
