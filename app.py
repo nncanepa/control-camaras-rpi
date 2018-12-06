@@ -108,6 +108,7 @@ def capturarImagenes():
     return 0
 
 
+
 def initCameras(camaras):
     '''
     Funcion que inicializa la conexion con todas las camaras listadas
