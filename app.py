@@ -9,6 +9,9 @@ import imageio
 from numpy import uint8
 import ast
 from concurrent import futures
+from bottle import get, post, request, static_file, run, route
+import os
+import sys
 
 # Cargo configuracion de las camaras desde el archivo
 # config_camaras.conf
@@ -126,8 +129,17 @@ def initCameras(camaras):
 
 initCameras(camaras)
 
-while True:
-    try:
-        capturarImagenes()
-    except KeyboardInterrupt:
-        break
+#while True:
+#    try:
+#        capturarImagenes()
+#    except KeyboardInterrupt:
+#        break
+
+path = os.path.abspath(__file__)
+dir_path = os.path.dirname(path)
+
+@route('/')
+def index():
+    return static_file('index.html', root=dir_path + '\\html\\static')
+
+run(host='127.0.0.1', port=8080, debug=True)
