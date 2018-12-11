@@ -11,6 +11,7 @@ import ast
 from concurrent import futures
 from matplotlib import pyplot as plt
 from queue import Queue
+import numpy as np
 
 # Cargo configuracion de las camaras desde el archivo
 # config_camaras.conf
@@ -80,8 +81,8 @@ def capturarImagenes():
     for f in futures.as_completed(wait_for):
         imgs.append(f.result())
     executor.shutdown()
-    imgs2 = imgs.copy()
-    #imgs2 = []
+    imgsCrudas = imgs.copy()
+    imgsEnhanced = []
     while imgs:
         img = imgs.pop()
         if not os.path.exists('{}/{}'.format(mainDir, img.camName)):
@@ -94,14 +95,14 @@ def capturarImagenes():
                         img.imagen.astype(uint8),
                         quality=90)
         dx, dy =36, 36
-        grid_color = [255, 255, 255]
-        #grid_color = [0, 0, 0]
+        #grid_color = [255, 255, 255]
+        grid_color = [0, 0, 0]
         img_enh = img.imagen.copy()
         img_enh[::dx,:,:] = grid_color
         img_enh[:,::dy,:] = grid_color
         img_pil=Image.fromarray(img_enh.astype(uint8))
         img_pil=img_pil.point(lambda i: i*3)
-        #imgs2.append(img_pil)
+        imgsEnhanced.append([img_pil, img.camName])
         img_pil.save('{}/ultima_{}.jpg'.format(mainDir, img.camName), quality=80)
         with open('{}/{}/log.txt'.format(mainDir, img.camName), 'a') as file:
             file.write('{};{};{};{};{};{}\n'.format(img.camName,
@@ -110,7 +111,7 @@ def capturarImagenes():
                                                     img.framerate,
                                                     img.timestamp,
                                                     img.crop))
-    return imgs2
+    return imgsCrudas, imgsEnhanced
 
 
 
@@ -128,7 +129,7 @@ def initCameras(camaras):
         camaras[cam]['cam'].inicializar(camaras[cam]['iso'], camaras[cam]['shutter_speed'])
     return camaras
 
-def graficar(q):
+def graficarCrudo(q):
     '''
     Va graficando en un proceso separado las imagenes
     que capturadas. Las imagenes las recibe a traves
@@ -150,14 +151,43 @@ def graficar(q):
             except:
                 pass
 
-if __name__ == '__main__':
-    initCameras(camaras)
-    mq = mp.Queue(4)
-    p = mp.Process(target=graficar, args=(mq, ), daemon=True)
-    p.start()
+def graficarEnhanced(q):
+    '''
+    Va graficando en un proceso separado las imagenes
+    que capturadas. Las imagenes las recibe a traves
+    de una cola multiprocessing.Queue()
+    '''
+    plt.ion()
+    fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1)
+    fig.tight_layout()
     while True:
         try:
-            imgs = capturarImagenes()
-            mq.put(imgs)
+            imgs = q.get_nowait()
+        except:
+            try:
+                ax1.set_title(imgs[1][1])
+                ax1.imshow(np.array(imgs[1][0])[...,:3])
+                ax2.set_title(imgs[0][1])
+                ax2.imshow(np.array(imgs[0][0])[...,:3])
+                plt.pause(0.001)
+            except:
+                pass
+
+
+if __name__ == '__main__':
+    initCameras(camaras)
+    mqCrudas = mp.Queue(4)
+    mqEnhanced = mp.Queue(4)
+    p1 = mp.Process(target=graficarCrudo, args=(mqCrudas, ), daemon=True)
+    p2 = mp.Process(target=graficarEnhanced, args=(mqEnhanced, ), daemon=True)
+    p1.start()
+    p2.start()
+    while True:
+        try:
+            imgsCrudas, imgsEnhanced = capturarImagenes()
+            mqCrudas.put(imgsCrudas)
+            mqEnhanced.put(imgsEnhanced)
         except KeyboardInterrupt:
+            p1.terminate()
+            p2.terminate()
             break
