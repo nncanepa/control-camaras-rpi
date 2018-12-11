@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 from PIL import Image
 from multiprocessing.connection import Client
-from threading import Thread
+import multiprocessing as mp
 import time
 import os
 import datetime
@@ -9,9 +9,8 @@ import imageio
 from numpy import uint8
 import ast
 from concurrent import futures
-from bottle import get, post, request, static_file, run, route
-import os
-import sys
+from matplotlib import pyplot as plt
+from queue import Queue
 
 # Cargo configuracion de las camaras desde el archivo
 # config_camaras.conf
@@ -81,6 +80,8 @@ def capturarImagenes():
     for f in futures.as_completed(wait_for):
         imgs.append(f.result())
     executor.shutdown()
+    imgs2 = imgs.copy()
+    #imgs2 = []
     while imgs:
         img = imgs.pop()
         if not os.path.exists('{}/{}'.format(mainDir, img.camName)):
@@ -100,6 +101,7 @@ def capturarImagenes():
         img_enh[:,::dy,:] = grid_color
         img_pil=Image.fromarray(img_enh.astype(uint8))
         img_pil=img_pil.point(lambda i: i*3)
+        #imgs2.append(img_pil)
         img_pil.save('{}/ultima_{}.jpg'.format(mainDir, img.camName), quality=80)
         with open('{}/{}/log.txt'.format(mainDir, img.camName), 'a') as file:
             file.write('{};{};{};{};{};{}\n'.format(img.camName,
@@ -108,7 +110,7 @@ def capturarImagenes():
                                                     img.framerate,
                                                     img.timestamp,
                                                     img.crop))
-    return 0
+    return imgs2
 
 
 
@@ -126,20 +128,36 @@ def initCameras(camaras):
         camaras[cam]['cam'].inicializar(camaras[cam]['iso'], camaras[cam]['shutter_speed'])
     return camaras
 
+def graficar(q):
+    '''
+    Va graficando en un proceso separado las imagenes
+    que capturadas. Las imagenes las recibe a traves
+    de una cola multiprocessing.Queue()
+    '''
+    plt.ion()
+    fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1)
+    fig.tight_layout()
+    while True:
+        try:
+            imgs = q.get_nowait()
+        except:
+            try:
+                ax1.set_title(imgs[0].camName)
+                ax1.imshow(imgs[0].imagen)
+                ax2.set_title(imgs[1].camName)
+                ax2.imshow(imgs[1].imagen)
+                plt.pause(0.001)
+            except:
+                pass
 
-initCameras(camaras)
-
-#while True:
-#    try:
-#        capturarImagenes()
-#    except KeyboardInterrupt:
-#        break
-
-path = os.path.abspath(__file__)
-dir_path = os.path.dirname(path)
-
-@route('/')
-def index():
-    return static_file('index.html', root=dir_path + '\\html\\static')
-
-run(host='127.0.0.1', port=8080, debug=True)
+if __name__ == '__main__':
+    initCameras(camaras)
+    mq = mp.Queue(4)
+    p = mp.Process(target=graficar, args=(mq, ), daemon=True)
+    p.start()
+    while True:
+        try:
+            imgs = capturarImagenes()
+            mq.put(imgs)
+        except KeyboardInterrupt:
+            break
