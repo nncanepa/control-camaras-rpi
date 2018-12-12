@@ -10,7 +10,6 @@ from numpy import uint8
 import ast
 from concurrent import futures
 from matplotlib import pyplot as plt
-from queue import Queue
 import numpy as np
 
 # Cargo configuracion de las camaras desde el archivo
@@ -136,7 +135,7 @@ def graficarCrudo(q):
     de una cola multiprocessing.Queue()
     '''
     plt.ion()
-    fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1)
+    fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1)
     fig.tight_layout()
     while True:
         try:
@@ -147,6 +146,8 @@ def graficarCrudo(q):
                 ax1.imshow(imgs[0].imagen)
                 ax2.set_title(imgs[1].camName)
                 ax2.imshow(imgs[1].imagen)
+                ax3.set_title(imgs[2].camName)
+                ax3.imshow(imgs[2].imagen)
                 plt.pause(0.001)
             except:
                 pass
@@ -159,17 +160,19 @@ def graficarEnhanced(q):
     de una cola multiprocessing.Queue()
     '''
     plt.ion()
-    fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1)
+    fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1)
     fig.tight_layout()
     while True:
         try:
             imgs = q.get_nowait()
         except:
             try:
-                ax1.set_title(imgs[1][1])
-                ax1.imshow(np.array(imgs[1][0])[...,:3])
-                ax2.set_title(imgs[0][1])
-                ax2.imshow(np.array(imgs[0][0])[...,:3])
+                ax1.set_title(imgs[2][1])
+                ax1.imshow(np.array(imgs[2][0])[...,:3])
+                ax2.set_title(imgs[1][1])
+                ax2.imshow(np.array(imgs[1][0])[...,:3])
+                ax3.set_title(imgs[0][1])
+                ax3.imshow(np.array(imgs[0][0])[...,:3])
                 plt.pause(0.001)
             except:
                 pass
