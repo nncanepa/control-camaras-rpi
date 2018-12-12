@@ -154,7 +154,8 @@ def graficarCrudo(q):
 def graficarEnhanced(q):
     '''
     Va graficando en un proceso separado las imagenes
-    que capturadas. Las imagenes las recibe a traves
+    que capturadas, retocadas para su mejor visualizacion
+    durante la operación. Las imagenes las recibe a traves
     de una cola multiprocessing.Queue()
     '''
     plt.ion()
