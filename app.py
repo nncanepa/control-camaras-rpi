@@ -73,6 +73,7 @@ def capturarImagenes():
     imgs=[]
     fecha = datetime.datetime.today().strftime('%Y_%m_%d_%H')
     mainDir = 'capturas_{}'.format(fecha)
+    lastImgDir = 'html/images'
     if not os.path.exists(mainDir):
         os.makedirs(mainDir)
     executor = futures.ThreadPoolExecutor(max_workers=2)
@@ -102,7 +103,7 @@ def capturarImagenes():
         img_pil=Image.fromarray(img_enh.astype(uint8))
         img_pil=img_pil.point(lambda i: i*3)
         imgsEnhanced.append([img_pil, img.camName])
-        img_pil.save('{}/ultima_{}.jpg'.format(mainDir, img.camName), quality=80)
+        img_pil.save('{}/ultima_{}.jpg'.format(lastImgDir, img.camName), quality=80)
         with open('{}/{}/log.txt'.format(mainDir, img.camName), 'a') as file:
             file.write('{};{};{};{};{};{}\n'.format(img.camName,
                                                     img.iso,
@@ -128,70 +129,11 @@ def initCameras(camaras):
         camaras[cam]['cam'].inicializar(camaras[cam]['iso'], camaras[cam]['shutter_speed'])
     return camaras
 
-def graficarCrudo(q):
-    '''
-    Va graficando en un proceso separado las imagenes
-    que capturadas. Las imagenes las recibe a traves
-    de una cola multiprocessing.Queue()
-    '''
-    plt.ion()
-    fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1)
-    fig.tight_layout()
-    while True:
-        try:
-            imgs = q.get_nowait()
-        except:
-            try:
-                ax1.set_title(imgs[0].camName)
-                ax1.imshow(imgs[0].imagen)
-                ax2.set_title(imgs[1].camName)
-                ax2.imshow(imgs[1].imagen)
-                ax3.set_title(imgs[2].camName)
-                ax3.imshow(imgs[2].imagen)
-                plt.pause(0.001)
-            except:
-                pass
-
-def graficarEnhanced(q):
-    '''
-    Va graficando en un proceso separado las imagenes
-    que capturadas, retocadas para su mejor visualizacion
-    durante la operación. Las imagenes las recibe a traves
-    de una cola multiprocessing.Queue()
-    '''
-    plt.ion()
-    fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1)
-    fig.tight_layout()
-    while True:
-        try:
-            imgs = q.get_nowait()
-        except:
-            try:
-                ax1.set_title(imgs[2][1])
-                ax1.imshow(np.array(imgs[2][0])[...,:3])
-                ax2.set_title(imgs[1][1])
-                ax2.imshow(np.array(imgs[1][0])[...,:3])
-                ax3.set_title(imgs[0][1])
-                ax3.imshow(np.array(imgs[0][0])[...,:3])
-                plt.pause(0.001)
-            except:
-                pass
-
 
 if __name__ == '__main__':
     initCameras(camaras)
-    mqCrudas = mp.Queue(4)
-    mqEnhanced = mp.Queue(4)
-    p1 = mp.Process(target=graficarCrudo, args=(mqCrudas, ), daemon=True)
-    p2 = mp.Process(target=graficarEnhanced, args=(mqEnhanced, ), daemon=True)
-    p1.start()
-    p2.start()
     while True:
         try:
-            imgsCrudas, imgsEnhanced = capturarImagenes()
-            mqCrudas.put(imgsCrudas)
-            mqEnhanced.put(imgsEnhanced)
+            capturarImagenes()
         except KeyboardInterrupt:
-            p1.terminate()
-            p2.terminate()
             break
