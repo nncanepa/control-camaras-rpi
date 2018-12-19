@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 from PIL import Image
 from multiprocessing.connection import Client
-from threading import Thread
+import multiprocessing as mp
 import time
 import os
 import datetime
@@ -9,11 +9,13 @@ import imageio
 from numpy import uint8
 import ast
 from concurrent import futures
+from matplotlib import pyplot as plt
+import numpy as np
 
 # Cargo configuracion de las camaras desde el archivo
 # config_camaras.conf
 
-with open('config_camaras_dev.conf', 'r') as file:
+with open('config_camaras.conf', 'r') as file:
     camaras = ast.literal_eval(file.read())
 
 
@@ -71,6 +73,7 @@ def capturarImagenes():
     imgs=[]
     fecha = datetime.datetime.today().strftime('%Y_%m_%d_%H')
     mainDir = 'capturas_{}'.format(fecha)
+    lastImgDir = 'html/images'
     if not os.path.exists(mainDir):
         os.makedirs(mainDir)
     executor = futures.ThreadPoolExecutor(max_workers=2)
@@ -78,6 +81,8 @@ def capturarImagenes():
     for f in futures.as_completed(wait_for):
         imgs.append(f.result())
     executor.shutdown()
+    imgsCrudas = imgs.copy()
+    imgsEnhanced = []
     while imgs:
         img = imgs.pop()
         if not os.path.exists('{}/{}'.format(mainDir, img.camName)):
@@ -90,14 +95,15 @@ def capturarImagenes():
                         img.imagen.astype(uint8),
                         quality=90)
         dx, dy =36, 36
-        grid_color = [255, 255, 255]
-        #grid_color = [0, 0, 0]
+        #grid_color = [255, 255, 255]
+        grid_color = [0, 0, 0]
         img_enh = img.imagen.copy()
         img_enh[::dx,:,:] = grid_color
         img_enh[:,::dy,:] = grid_color
         img_pil=Image.fromarray(img_enh.astype(uint8))
         img_pil=img_pil.point(lambda i: i*3)
-        img_pil.save('{}/ultima_{}.jpg'.format(mainDir, img.camName), quality=80)
+        imgsEnhanced.append([img_pil, img.camName])
+        img_pil.save('{}/ultima_{}.jpg'.format(lastImgDir, img.camName), quality=80)
         with open('{}/{}/log.txt'.format(mainDir, img.camName), 'a') as file:
             file.write('{};{};{};{};{};{}\n'.format(img.camName,
                                                     img.iso,
@@ -105,8 +111,41 @@ def capturarImagenes():
                                                     img.framerate,
                                                     img.timestamp,
                                                     img.crop))
-    return 0
+    return imgsCrudas, imgsEnhanced
 
+def capturarImagenesJpeg():
+    imgs=[]
+    fecha = datetime.datetime.today().strftime('%Y_%m_%d_%H')
+    mainDir = 'capturas_{}'.format(fecha)
+    lastImgDir = 'html/images'
+    if not os.path.exists(mainDir):
+        os.makedirs(mainDir)
+    executor = futures.ThreadPoolExecutor(max_workers=2)
+    wait_for =[executor.submit(camaras[cam]['cam'].capturar_jpeg, ) for cam in camaras]
+    for f in futures.as_completed(wait_for):
+        imgs.append(f.result())
+    executor.shutdown()
+    while imgs:
+        img = imgs.pop()
+        if not os.path.exists('{}/{}'.format(mainDir, img.camName)):
+            os.makedirs('{}/{}'.format(mainDir, img.camName))
+        print('guardando jpg')
+        img.imagen.save('{}/{}/{}__{}_{}.jpg'.format(mainDir,
+                                                     img.camName,
+                                                     img.timestamp.strftime('%Y%m%d%H%M%S'),
+                                                     img.iso,
+                                                     img.shutter_speed)
+                                                     )
+        print('multiplicando')
+        img_enh = img.imagen.point(lambda i: i*5)
+        img_enh.save('{}/ultima_{}.jpg'.format(lastImgDir, img.camName), quality=100)
+        with open('{}/{}/log.txt'.format(mainDir, img.camName), 'a') as file:
+            file.write('{};{};{};{};{};{}\n'.format(img.camName,
+                                                    img.iso,
+                                                    img.shutter_speed,
+                                                    img.framerate,
+                                                    img.timestamp,
+                                                    img.crop))
 
 
 def initCameras(camaras):
@@ -118,16 +157,18 @@ def initCameras(camaras):
     for cam in camaras:
         camaras[cam]['conn'] = Client(camaras[cam]['url'], authkey=b'peekaboo')
         camaras[cam]['cam'] = RPCProxy(camaras[cam]['conn'])
-        camaras[cam]['cam'].set_crop(camaras[cam]['crop'])
+        if 'crop' in camaras[cam].keys():
+            camaras[cam]['cam'].set_crop(camaras[cam]['crop'])
         camaras[cam]['cam'].set_date(str(datetime.datetime.today()))
         camaras[cam]['cam'].inicializar(camaras[cam]['iso'], camaras[cam]['shutter_speed'])
     return camaras
 
 
-initCameras(camaras)
-
-while True:
-    try:
-        capturarImagenes()
-    except KeyboardInterrupt:
-        break
+if __name__ == '__main__':
+    initCameras(camaras)
+    while True:
+        try:
+            #capturarImagenes()
+            capturarImagenesJpeg()
+        except KeyboardInterrupt:
+            break
