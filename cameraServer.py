@@ -64,6 +64,8 @@ class RPCHandler:
                     r = self._functions[func_name](*args, **kwargs)
                     connection.send(r)
                 except Exception as e:
+                    print('enviando excepcion')
+                    print(e)
                     connection.send(e)
         except EOFError:
             pass
@@ -105,28 +107,28 @@ class RPCHandler:
             return imagen
 
     def capturar_jpeg(self):
-        with BytesIO as stream:
-            timestamp = datetime.datetime.today()#.strftime('%Y%m%d%H%M%S')
-            self.cam.capture(stream, format='jpeg', quality=60)
-            stream.seek(0)
-            imagejpg = Image.open(stream)
-            if not self._cropped:
-                imagen = capturaRpi(imagejpg,
-                                    self.cam.iso,
-                                    self.cam.shutter_speed,
-                                    self.cam.framerate,
-                                    platform.node(),
-                                    timestamp=timestamp)
-            else:
-                area = (self.xi, self.yi, self.xf, self.yf)
-                imagen = capturaRpi(imagejpg.crop(area),
-                                    self.cam.iso,
-                                    self.cam.shutter_speed,
-                                    self.cam.framerate,
-                                    platform.node(),
-                                    crop=(self.xi,self.xf,self.yi,self.yf),
-                                    timestamp=timestamp)
-            return imagen
+        stream = BytesIO()
+        timestamp = datetime.datetime.today()#.strftime('%Y%m%d%H%M%S')
+        self.cam.capture(stream, format='jpeg', quality=60)
+        stream.seek(0)
+        imagejpg = Image.open(stream)
+        if not self._cropped:
+            imagen = capturaRpi(imagejpg,
+                                self.cam.iso,
+                                self.cam.shutter_speed,
+                                self.cam.framerate,
+                                platform.node(),
+                                timestamp=timestamp)
+        else:
+            area = (self.xi, self.yi, self.xf, self.yf)
+            imagen = capturaRpi(imagejpg.crop(area),
+                                self.cam.iso,
+                                self.cam.shutter_speed,
+                                self.cam.framerate,
+                                platform.node(),
+                                crop=(self.xi,self.xf,self.yi,self.yf),
+                                timestamp=timestamp)
+        return imagen
 
     def set_iso(self, iso):
         self.cam.iso = iso

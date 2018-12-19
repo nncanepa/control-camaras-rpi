@@ -15,7 +15,7 @@ import numpy as np
 # Cargo configuracion de las camaras desde el archivo
 # config_camaras.conf
 
-with open('config_camaras_dev.conf', 'r') as file:
+with open('config_camaras.conf', 'r') as file:
     camaras = ast.literal_eval(file.read())
 
 
@@ -129,12 +129,14 @@ def capturarImagenesJpeg():
         img = imgs.pop()
         if not os.path.exists('{}/{}'.format(mainDir, img.camName)):
             os.makedirs('{}/{}'.format(mainDir, img.camName))
+        print('guardando jpg')
         img.imagen.save('{}/{}/{}__{}_{}.jpg'.format(mainDir,
                                                      img.camName,
                                                      img.timestamp.strftime('%Y%m%d%H%M%S'),
                                                      img.iso,
                                                      img.shutter_speed)
                                                      )
+        print('multiplicando')
         img_enh = img.imagen.point(lambda i: i*5)
         img_enh.save('{}/ultima_{}.jpg'.format(lastImgDir, img.camName), quality=100)
         with open('{}/{}/log.txt'.format(mainDir, img.camName), 'a') as file:
@@ -144,7 +146,6 @@ def capturarImagenesJpeg():
                                                     img.framerate,
                                                     img.timestamp,
                                                     img.crop))
-    return 0
 
 
 def initCameras(camaras):
@@ -156,7 +157,8 @@ def initCameras(camaras):
     for cam in camaras:
         camaras[cam]['conn'] = Client(camaras[cam]['url'], authkey=b'peekaboo')
         camaras[cam]['cam'] = RPCProxy(camaras[cam]['conn'])
-        camaras[cam]['cam'].set_crop(camaras[cam]['crop'])
+        if 'crop' in camaras[cam].keys():
+            camaras[cam]['cam'].set_crop(camaras[cam]['crop'])
         camaras[cam]['cam'].set_date(str(datetime.datetime.today()))
         camaras[cam]['cam'].inicializar(camaras[cam]['iso'], camaras[cam]['shutter_speed'])
     return camaras
