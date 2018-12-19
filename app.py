@@ -113,6 +113,38 @@ def capturarImagenes():
                                                     img.crop))
     return imgsCrudas, imgsEnhanced
 
+def capturarImagenesJpeg():
+    imgs=[]
+    fecha = datetime.datetime.today().strftime('%Y_%m_%d_%H')
+    mainDir = 'capturas_{}'.format(fecha)
+    lastImgDir = 'html/images'
+    if not os.path.exists(mainDir):
+        os.makedirs(mainDir)
+    executor = futures.ThreadPoolExecutor(max_workers=2)
+    wait_for =[executor.submit(camaras[cam]['cam'].capturar_jpeg, ) for cam in camaras]
+    for f in futures.as_completed(wait_for):
+        imgs.append(f.result())
+    executor.shutdown()
+    while imgs:
+        img = imgs.pop()
+        if not os.path.exists('{}/{}'.format(mainDir, img.camName)):
+            os.makedirs('{}/{}'.format(mainDir, img.camName))
+        img.imagen.save('{}/{}/{}__{}_{}.jpg'.format(mainDir,
+                                                     img.camName,
+                                                     img.timestamp.strftime('%Y%m%d%H%M%S'),
+                                                     img.iso,
+                                                     img.shutter_speed)
+                                                     )
+        img_enh = img.imagen.point(lambda i: i*5)
+        img_enh.save('{}/ultima_{}.jpg'.format(lastImgDir, img.camName), quality=100)
+        with open('{}/{}/log.txt'.format(mainDir, img.camName), 'a') as file:
+            file.write('{};{};{};{};{};{}\n'.format(img.camName,
+                                                    img.iso,
+                                                    img.shutter_speed,
+                                                    img.framerate,
+                                                    img.timestamp,
+                                                    img.crop))
+    return 0
 
 
 def initCameras(camaras):
@@ -134,6 +166,7 @@ if __name__ == '__main__':
     initCameras(camaras)
     while True:
         try:
-            capturarImagenes()
+            #capturarImagenes()
+            capturarImagenesJpeg()
         except KeyboardInterrupt:
             break

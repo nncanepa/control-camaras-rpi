@@ -33,6 +33,7 @@ class RPCHandler:
     def __init__(self):
         self._functions = {'inicializar': self.inicializar,
                            'capturar': self.capturar,
+                           'capturar_jpeg': self.capturar_jpeg,
                            'set_iso': self.set_iso,
                            'set_shutter_speed': self.set_shutter_speed,
                            'close': self.close,
@@ -70,7 +71,8 @@ class RPCHandler:
     def inicializar(self, iso=100, sp=45000):
         try:
             self.cam = picamera.PiCamera()
-            self.cam.resolution = self.cam.MAX_RESOLUTION
+            #self.cam.resolution = self.cam.MAX_RESOLUTION
+            self.cam.resolution = (1640, 1232)
             self.cam.iso = iso
             self.cam.framerate = float(1.0/(sp/(10**6)))
             self.cam.shutter_speed = sp
@@ -80,20 +82,50 @@ class RPCHandler:
         except:
             return 'Camara ya inicializada'
 
-    @timeit
     def capturar(self):
         with picamera.array.PiRGBArray(self.cam) as self.stream:
             timestamp = datetime.datetime.today()#.strftime('%Y%m%d%H%M%S')
             self.cam.capture(self.stream, 'rgb')
             if not self._cropped:
-                imagen = capturaRpi(self.stream.array[:,:,:], self.cam.iso,
-                                    self.cam.shutter_speed, self.cam.framerate, platform.node(),
+                imagen = capturaRpi(self.stream.array[:,:,:],
+                                    self.cam.iso,
+                                    self.cam.shutter_speed,
+                                    self.cam.framerate,
+                                    platform.node(),
                                     timestamp=timestamp)
             else:
                 im = self.stream.array[self.xi:self.xf,self.yi:self.yf,:]
-                imagen = capturaRpi(im[:,:,:], self.cam.iso,
-                                    self.cam.shutter_speed, self.cam.framerate, platform.node(),
-                                    crop=(self.xi,self.xf,self.yi,self.yf),timestamp=timestamp)
+                imagen = capturaRpi(im[:,:,:],
+                                    self.cam.iso,
+                                    self.cam.shutter_speed,
+                                    self.cam.framerate,
+                                    platform.node(),
+                                    crop=(self.xi,self.xf,self.yi,self.yf),
+                                    timestamp=timestamp)
+            return imagen
+
+    def capturar_jpeg(self):
+        with BytesIO as stream:
+            timestamp = datetime.datetime.today()#.strftime('%Y%m%d%H%M%S')
+            self.cam.capture(stream, format='jpeg', quality=60)
+            stream.seek(0)
+            imagejpg = Image.open(stream)
+            if not self._cropped:
+                imagen = capturaRpi(imagejpg,
+                                    self.cam.iso,
+                                    self.cam.shutter_speed,
+                                    self.cam.framerate,
+                                    platform.node(),
+                                    timestamp=timestamp)
+            else:
+                area = (self.xi, self.yi, self.xf, self.yf)
+                imagen = capturaRpi(imagejpg.crop(area),
+                                    self.cam.iso,
+                                    self.cam.shutter_speed,
+                                    self.cam.framerate,
+                                    platform.node(),
+                                    crop=(self.xi,self.xf,self.yi,self.yf),
+                                    timestamp=timestamp)
             return imagen
 
     def set_iso(self, iso):
