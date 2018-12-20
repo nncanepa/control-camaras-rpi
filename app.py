@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-from PIL import Image
+from PIL import Image, ImageDraw
 from multiprocessing.connection import Client
 import multiprocessing as mp
 import time
@@ -113,6 +113,19 @@ def capturarImagenes():
                                                     img.crop))
     return imgsCrudas, imgsEnhanced
 
+def doGrid(img):
+    draw = ImageDraw.Draw(img)
+    y_start, x_start = (0, 0)
+    y_end, x_end = img.size()
+    step_size = int(img.width / 68) # Calib para grilla c/2mm
+    for x in range(0, img.width, step_size):
+        line = ((x, y_start), (x, y_end))
+        draw.line(line, fill=128)
+    for y in range(0, img.height, step_size):
+        line = ((x_start, y), (x_end, y))
+        draw.line(line, fill=128)
+    return img
+
 def capturarImagenesJpeg():
     imgs=[]
     fecha = datetime.datetime.today().strftime('%Y_%m_%d_%H')
@@ -136,8 +149,9 @@ def capturarImagenesJpeg():
                                                      img.iso,
                                                      img.shutter_speed)
                                                      )
-        print('multiplicando')
+        print('multiplicando y guardando')
         img_enh = img.imagen.point(lambda i: i*5)
+        img_enh = doGrid(img_enh)
         img_enh.save('{}/ultima_{}.jpg'.format(lastImgDir, img.camName), quality=100)
         with open('{}/{}/log.txt'.format(mainDir, img.camName), 'a') as file:
             file.write('{};{};{};{};{};{}\n'.format(img.camName,
