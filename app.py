@@ -116,14 +116,14 @@ def capturarImagenes():
 def doGrid(img):
     draw = ImageDraw.Draw(img)
     y_start, x_start = (0, 0)
-    y_end, x_end = img.size()
-    step_size = int(camaras['cam2']['resolution'][1] / 68) # Calib para grilla c/2mm
-    for x in range(0, img.width, step_size):
-        line = ((x, y_start), (x, y_end))
-        draw.line(line, fill=128)
+    x_end, y_end = img.size
+    step_size = int(240 / 14) # Calib para grilla c/2mm
+#    for x in range(0, img.width, step_size):
+#        line = ((x, y_start), (x, y_end))
+#        draw.line(line, fill=128)
     for y in range(0, img.height, step_size):
         line = ((x_start, y), (x_end, y))
-        draw.line(line, fill=128)
+        draw.line(line, fill=128, width=1)
     return img
 
 def capturarImagenesJpeg():
@@ -150,7 +150,7 @@ def capturarImagenesJpeg():
                                                      img.shutter_speed)
                                                      )
         print('multiplicando y guardando')
-        img_enh = img.imagen.point(lambda i: i*5)
+        img_enh = img.imagen.point(lambda i: i*1)
         img_enh = doGrid(img_enh)
         img_enh.save('{}/ultima_{}.jpg'.format(lastImgDir, img.camName), quality=100)
         with open('{}/{}/log.txt'.format(mainDir, img.camName), 'a') as file:
