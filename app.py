@@ -117,7 +117,7 @@ def doGrid(img):
     draw = ImageDraw.Draw(img)
     y_start, x_start = (0, 0)
     y_end, x_end = img.size()
-    step_size = int(img.width / 68) # Calib para grilla c/2mm
+    step_size = int(camaras['cam2']['resolution'][1] / 68) # Calib para grilla c/2mm
     for x in range(0, img.width, step_size):
         line = ((x, y_start), (x, y_end))
         draw.line(line, fill=128)
