@@ -157,10 +157,12 @@ def initCameras(camaras):
     for cam in camaras:
         camaras[cam]['conn'] = Client(camaras[cam]['url'], authkey=b'peekaboo')
         camaras[cam]['cam'] = RPCProxy(camaras[cam]['conn'])
+        camaras[cam]['cam'].set_date(str(datetime.datetime.today()))
+        camaras[cam]['cam'].inicializar(camaras[cam]['iso'],
+                                        camaras[cam]['shutter_speed'],
+                                        camaras[cam]['resolution'])
         if 'crop' in camaras[cam].keys():
             camaras[cam]['cam'].set_crop(camaras[cam]['crop'])
-        camaras[cam]['cam'].set_date(str(datetime.datetime.today()))
-        camaras[cam]['cam'].inicializar(camaras[cam]['iso'], camaras[cam]['shutter_speed'])
     return camaras
 
 

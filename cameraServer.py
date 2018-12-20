@@ -70,11 +70,11 @@ class RPCHandler:
         except EOFError:
             pass
 
-    def inicializar(self, iso=100, sp=45000):
+    def inicializar(self, iso=100, sp=45000, res=(3280, 2464)):
+        self._cropped = False
         try:
             self.cam = picamera.PiCamera()
-            #self.cam.resolution = self.cam.MAX_RESOLUTION
-            self.cam.resolution = (1640, 1232)
+            self.cam.resolution = res
             self.cam.iso = iso
             self.cam.framerate = float(1.0/(sp/(10**6)))
             self.cam.shutter_speed = sp
@@ -108,7 +108,7 @@ class RPCHandler:
 
     def capturar_jpeg(self):
         stream = BytesIO()
-        timestamp = datetime.datetime.today()#.strftime('%Y%m%d%H%M%S')
+        timestamp = datetime.datetime.today()
         self.cam.capture(stream, format='jpeg', quality=60)
         stream.seek(0)
         imagejpg = Image.open(stream)
@@ -152,8 +152,8 @@ class RPCHandler:
         assert len(crop)==4
         self._cropped = True
         self.xi = crop[0]
-        self.xf = crop[1]
-        self.yi = crop[2]
+        self.yi = crop[1]
+        self.xf = crop[2]
         self.yf = crop[3]
         print('Crop -> X[{}:{}] Y[{}:{}]'.format(self.xi,self.xf,self.yi,self.yf))
         return 'Crop -> X[{}:{}] Y[{}:{}]'.format(self.xi,self.xf,self.yi,self.yf)
